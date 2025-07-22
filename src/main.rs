@@ -1,7 +1,9 @@
-// ---------------------------------------
+//////////////////////////////////////////
 // Dreambot
-// ---------------------------------------
+//////////////////////////////////////////
+
 use chrono::{Datelike, NaiveDate};
+use sqlx::sqlite::SqlitePool;
 use sqlx::sqlite::SqlitePoolOptions;
 use teloxide::{
     dispatching::dialogue::{serializer::Json, ErasedStorage, SqliteStorage, Storage},
@@ -18,8 +20,15 @@ type HandlerResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
 const DATE_FORMAT: &str = "%d.%m.%Y";
 const SEALS: &str = "resources/seals.json";
-const DB_LOCATION: &str = "db/dreambase.sqlite";
+const DB_LOCATION: &str = "/srv/dreambot/db/dreambase.sqlite";
 const MAX_DB_CONNECTIONS: u32 = 5;
+
+#[derive(sqlx::FromRow)]
+struct User {
+    id: i64,
+    telegram_id: String,
+    birth_date: String,
+}
 
 #[derive(Clone, Default, serde::Serialize, serde::Deserialize)]
 pub enum State {
@@ -43,10 +52,10 @@ async fn main() -> Result<(), sqlx::Error> {
         .connect(DB_LOCATION)
         .await?;
 
-    let seals = {
-        let seals = std::fs::read_to_string(SEALS).expect("Can't find seals file");
-        serde_json::from_str::<tzolkin::Seals>(&seals).expect("Can't parse seals file")
-    };
+    // let seals = {
+    //     let seals = std::fs::read_to_string(SEALS).expect("Can't find seals file");
+    //     serde_json::from_str::<tzolkin::Seals>(&seals).expect("Can't parse seals file")
+    // };
 
     let bot = Bot::from_env();
 
@@ -57,7 +66,7 @@ async fn main() -> Result<(), sqlx::Error> {
             .branch(dptree::case![State::Start].endpoint(start))
             .branch(dptree::case![State::Calc].endpoint(calc)),
     )
-    .dependencies(dptree::deps![storage, db_pool, seals])
+    .dependencies(dptree::deps![storage, db_pool])
     .enable_ctrlc_handler()
     .build()
     .dispatch()
@@ -76,14 +85,22 @@ async fn start(bot: Bot, dialogue: DreamDialogue, msg: Message) -> HandlerResult
     Ok(())
 }
 
-async fn calc(bot: Bot, dialogue: DreamDialogue, msg: Message) -> HandlerResult {
+async fn calc(
+    bot: Bot,
+    dialogue: DreamDialogue,
+    msg: Message,
+    db_pool: SqlitePool,
+) -> HandlerResult {
     match msg
         .text()
         .map(|text| NaiveDate::parse_from_str(text, DATE_FORMAT))
     {
         Some(Ok(date)) => {
+            let user =
+                sqlx::query_as::<_, User>("SELECT * FROM users WHERE id = 1").fetch_one(&db_pool);
+
             let kin = tzolkin::calc(date.day(), date.month(), date.year());
-            let result = kin;
+            let result = user.await.unwrap().telegram_id;
             db::save(msg.chat.id.0, kin);
             bot.send_message(msg.chat.id, format!("{result}\n")).await?;
             dialogue.update(State::Start).await?;
