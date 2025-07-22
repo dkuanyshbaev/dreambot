@@ -1,10 +1,8 @@
 //////////////////////////////////////////
 // Dreambot
 //////////////////////////////////////////
-
 use chrono::{Datelike, NaiveDate};
-use sqlx::sqlite::SqlitePool;
-use sqlx::sqlite::SqlitePoolOptions;
+use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
 use teloxide::{
     dispatching::dialogue::{serializer::Json, ErasedStorage, SqliteStorage, Storage},
     prelude::*,
@@ -21,14 +19,7 @@ type HandlerResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 const DATE_FORMAT: &str = "%d.%m.%Y";
 const SEALS: &str = "resources/seals.json";
 const DB_LOCATION: &str = "/srv/dreambot/db/dreambase.sqlite";
-const MAX_DB_CONNECTIONS: u32 = 5;
-
-#[derive(sqlx::FromRow)]
-struct User {
-    id: i64,
-    telegram_id: String,
-    birth_date: String,
-}
+const MAX_DB_CONNECTIONS: u32 = 42;
 
 #[derive(Clone, Default, serde::Serialize, serde::Deserialize)]
 pub enum State {
@@ -96,13 +87,37 @@ async fn calc(
         .map(|text| NaiveDate::parse_from_str(text, DATE_FORMAT))
     {
         Some(Ok(date)) => {
-            let user =
-                sqlx::query_as::<_, User>("SELECT * FROM users WHERE id = 1").fetch_one(&db_pool);
+            let kin = tzolkin::kin(date.day(), date.month(), date.year());
+            let archetype = tzolkin::archetype(kin);
 
-            let kin = tzolkin::calc(date.day(), date.month(), date.year());
-            let result = user.await.unwrap().telegram_id;
-            db::save(msg.chat.id.0, kin);
+            /////////////////////////////////////////////////////////////////
+            let seals = sqlx::query_as::<_, db::Seal>("SELECT * FROM seals WHERE id = ? OR id = ?")
+                .bind(archetype.0 - 1)
+                .bind(archetype.1 - 1)
+                .fetch_all(&db_pool)
+                .await?;
+            // .unwrap();
+            // let main_seal = &seals.0.get((archetype.0 - 1) as usize);
+            // let type_seal = &seals.0.get((archetype.1 - 1) as usize);
+
+            let main_seal = &seals[0];
+            let type_seal = &seals[1];
+
+            let archetype_image = main_seal.image.to_owned();
+            let archetype_description = main_seal.archetype_description.to_owned();
+            let portrait_name = main_seal.archetype.to_owned();
+            let portrait_image = main_seal.image.to_owned();
+            let portrait_description = main_seal.portrait_description.to_owned();
+            let type_name = type_seal.archetype.to_owned();
+            let type_image = type_seal.image.to_owned();
+            let type_description = type_seal.type_description.to_owned();
+
+            let result = kin;
             bot.send_message(msg.chat.id, format!("{result}\n")).await?;
+
+            db::save(msg.chat.id.0, kin);
+            /////////////////////////////////////////////////////////////////
+
             dialogue.update(State::Start).await?;
         }
         _ => {
