@@ -2,22 +2,22 @@
 // Tzolkin core
 // ---------------------------------------
 use crate::tables::*;
-// // use serde::{Deserialize, Serialize};
-//
-// // #[derive(Serialize, Deserialize, Debug)]
-// struct Seal {
-//     id: u8,
-//     name: String,
-//     image: String,
-//     archetype: String,
-//     archetype_description: String,
-//     portrait_description: String,
-//     type_description: String,
-// }
-//
-// // #[derive(Serialize, Deserialize, Debug)]
-// pub struct Seals(Vec<Seal>);
-//
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize)]
+struct Seal {
+    id: u8,
+    name: String,
+    image: String,
+    archetype: String,
+    archetype_description: String,
+    portrait_description: String,
+    type_description: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Seals(Vec<Seal>);
+
 // // #[derive(Serialize, Deserialize, Debug)]
 // pub struct Tzolkin {
 //     pub archetype_name: String,
@@ -135,6 +135,7 @@ pub fn calc(day: u32, month: u32, year: i32) -> u32 {
     //                 type_description: type_seal.type_description.to_owned(),
     //             }
     //         }
+
     1
 }
 
