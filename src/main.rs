@@ -57,12 +57,10 @@ async fn calc(bot: Bot, dialogue: MyDialogue, msg: Message) -> HandlerResult {
         .map(|text| NaiveDate::parse_from_str(text, DATE_FORMAT))
     {
         Some(Ok(date)) => {
-            let kin = tzolkin::kin(date.day(), date.month(), date.year());
-            let archetype = tzolkin::archetype(kin);
-            bot.send_message(msg.chat.id, format!("{kin}\n")).await?;
-            // let result = tzolkin::result(kin);
-            // db::save(msg.chat.id, kin);
-            // bot.send_message(msg.chat.id, format!("{result}\n")).await?;
+            let kin = tzolkin::calc(date.day(), date.month(), date.year());
+            let result = kin;
+            db::save(msg.chat.id.0, kin);
+            bot.send_message(msg.chat.id, format!("{result}\n")).await?;
             dialogue.update(State::Start).await?;
         }
         _ => {

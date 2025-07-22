@@ -103,12 +103,12 @@ use crate::tables::*;
 // }
 
 pub fn calc(day: u32, month: u32, year: i32) -> u32 {
-    // let kin = kin(day: u32, month: u32, year: i32);
-    // let archetype = archetype(kin);
+    let kin = kin(day, month, year);
+    let archetype = archetype(kin);
 
-    //         let main_seal = &seals.0.get((archetype.0 - 1) as usize);
-    //         let type_seal = &seals.0.get((archetype.1 - 1) as usize);
-    //
+    // let main_seal = &seals.0.get((archetype.0 - 1) as usize);
+    // let type_seal = &seals.0.get((archetype.1 - 1) as usize);
+
     //         if main_seal.is_none() || type_seal.is_none() {
     //             Self::empty()
     //         } else {
@@ -138,7 +138,7 @@ pub fn calc(day: u32, month: u32, year: i32) -> u32 {
     1
 }
 
-pub fn kin(day: u32, month: u32, year: i32) -> u32 {
+fn kin(day: u32, month: u32, year: i32) -> u32 {
     let year_index = year as f32 - ((year as f32 / 52_f32).floor() * 52_f32);
     let mut kin = day + MONTH_TABLE[month as usize - 1] + YEAR_TABLE[year_index as usize];
     if kin > 260 {
@@ -147,6 +147,6 @@ pub fn kin(day: u32, month: u32, year: i32) -> u32 {
     kin
 }
 
-pub fn archetype(kin: u32) -> (u32, u32) {
+fn archetype(kin: u32) -> (u32, u32) {
     ARCHETYPE_TABLE[(kin - 1) as usize]
 }
