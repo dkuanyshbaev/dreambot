@@ -29,7 +29,7 @@ pub enum State {
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), sqlx::Error> {
     pretty_env_logger::init();
     log::info!("Starting Dreambot...");
 
@@ -38,7 +38,7 @@ async fn main() {
         .unwrap()
         .erase();
 
-    let pool = SqlitePoolOptions::new()
+    let db_pool = SqlitePoolOptions::new()
         .max_connections(MAX_DB_CONNECTIONS)
         .connect(DB_LOCATION)
         .await?;
@@ -57,11 +57,13 @@ async fn main() {
             .branch(dptree::case![State::Start].endpoint(start))
             .branch(dptree::case![State::Calc].endpoint(calc)),
     )
-    .dependencies(dptree::deps![storage])
+    .dependencies(dptree::deps![storage, db_pool, seals])
     .enable_ctrlc_handler()
     .build()
     .dispatch()
     .await;
+
+    Ok(())
 }
 
 async fn start(bot: Bot, dialogue: DreamDialogue, msg: Message) -> HandlerResult {
