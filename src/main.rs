@@ -1,5 +1,12 @@
+// ---------------------------------------
+// Dreambot
+// ---------------------------------------
 use chrono::{Datelike, NaiveDate};
 use teloxide::{dispatching::dialogue::InMemStorage, prelude::*};
+
+mod db;
+mod tables;
+mod tzolkin;
 
 type MyDialogue = Dialogue<State, InMemStorage<State>>;
 type HandlerResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
@@ -10,7 +17,7 @@ const DATE_FORMAT: &str = "%d.%m.%Y";
 pub enum State {
     #[default]
     Start,
-    Tzolkin,
+    Calc,
 }
 
 #[tokio::main]
@@ -25,7 +32,7 @@ async fn main() {
         Update::filter_message()
             .enter_dialogue::<Message, InMemStorage<State>, State>()
             .branch(dptree::case![State::Start].endpoint(start))
-            .branch(dptree::case![State::Tzolkin].endpoint(tzolkin)),
+            .branch(dptree::case![State::Calc].endpoint(calc)),
     )
     .dependencies(dptree::deps![InMemStorage::<State>::new()])
     .enable_ctrlc_handler()
@@ -35,31 +42,34 @@ async fn main() {
 }
 
 async fn start(bot: Bot, dialogue: MyDialogue, msg: Message) -> HandlerResult {
-    bot.send_message(msg.chat.id, "Hi! What's your birth date?")
-        .await?;
-    dialogue.update(State::Tzolkin).await?;
+    bot.send_message(
+        msg.chat.id,
+        "Привет! Когда твой день рождения (дд.мм.гггг)?",
+    )
+    .await?;
+    dialogue.update(State::Calc).await?;
     Ok(())
 }
 
-async fn tzolkin(bot: Bot, dialogue: MyDialogue, msg: Message) -> HandlerResult {
+async fn calc(bot: Bot, dialogue: MyDialogue, msg: Message) -> HandlerResult {
     match msg
         .text()
         .map(|text| NaiveDate::parse_from_str(text, DATE_FORMAT))
     {
         Some(Ok(date)) => {
-            let result = fn_tzolkin(msg.chat.id, date.day(), date.month(), date.year());
-            bot.send_message(msg.chat.id, format!("{result}\n")).await?;
+            let kin = tzolkin::kin(date.day(), date.month(), date.year());
+            let archetype = tzolkin::archetype(kin);
+            bot.send_message(msg.chat.id, format!("{kin}\n")).await?;
+            // let result = tzolkin::result(kin);
+            // db::save(msg.chat.id, kin);
+            // bot.send_message(msg.chat.id, format!("{result}\n")).await?;
             dialogue.update(State::Start).await?;
         }
         _ => {
-            bot.send_message(msg.chat.id, "Date format is dd.mm.yyyy")
+            bot.send_message(msg.chat.id, "Извини, но нужно дату в формате дд.мм.гггг")
                 .await?;
         }
     }
 
     Ok(())
-}
-
-fn fn_tzolkin(_user_id: ChatId, _day: u32, _month: u32, _year: i32) -> String {
-    "???".to_string()
 }
