@@ -89,13 +89,13 @@ async fn calc(
             let type_seal = db::get_seal(&db_pool, archetype.1).await?;
 
             let archetype_image = main_seal.image;
-            let archetype_description = main_seal.archetype_description;
+            let archetype_description = main_seal.archetype_description.replace("<br>", " ");
             let portrait_name = main_seal.archetype;
             let portrait_image = archetype_image.clone();
-            let portrait_description = main_seal.portrait_description;
+            let portrait_description = main_seal.portrait_description.replace("<br>", " ");
             let type_name = type_seal.archetype;
             let type_image = type_seal.image;
-            let type_description = type_seal.type_description;
+            let type_description = type_seal.type_description.replace("<br>", " ");
 
             bot.send_photo(
                 msg.chat.id,
