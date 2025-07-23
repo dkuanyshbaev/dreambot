@@ -1,9 +1,8 @@
 ### dreambot
 
 CREATE TABLE users (
-    id integer PRIMARY KEY AUTOINCREMENT,
-    telegram_id integer Not null,
-    birth_date text Not null
+    id integer PRIMARY KEY,
+    birthday text Not null
 );
 
 CREATE TABLE seals (

@@ -17,9 +17,8 @@ type DreamStorage = std::sync::Arc<ErasedStorage<State>>;
 type HandlerResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
 const DATE_FORMAT: &str = "%d.%m.%Y";
-const SEALS: &str = "resources/seals.json";
 const DB_LOCATION: &str = "/srv/dreambot/db/dreambase.sqlite";
-const MAX_DB_CONNECTIONS: u32 = 42;
+const MAX_DB_CONNECTIONS: u32 = 10;
 
 #[derive(Clone, Default, serde::Serialize, serde::Deserialize)]
 pub enum State {
@@ -42,11 +41,6 @@ async fn main() -> Result<(), sqlx::Error> {
         .max_connections(MAX_DB_CONNECTIONS)
         .connect(DB_LOCATION)
         .await?;
-
-    // let seals = {
-    //     let seals = std::fs::read_to_string(SEALS).expect("Can't find seals file");
-    //     serde_json::from_str::<tzolkin::Seals>(&seals).expect("Can't parse seals file")
-    // };
 
     let bot = Bot::from_env();
 
@@ -89,35 +83,30 @@ async fn calc(
         Some(Ok(date)) => {
             let kin = tzolkin::kin(date.day(), date.month(), date.year());
             let archetype = tzolkin::archetype(kin);
+            let main_seal = db::get_seal(&db_pool, archetype.0).await?;
+            let type_seal = db::get_seal(&db_pool, archetype.1).await?;
 
-            /////////////////////////////////////////////////////////////////
-            let seals = sqlx::query_as::<_, db::Seal>("SELECT * FROM seals WHERE id = ? OR id = ?")
-                .bind(archetype.0 - 1)
-                .bind(archetype.1 - 1)
-                .fetch_all(&db_pool)
+            let archetype_image = main_seal.image;
+            let archetype_description = main_seal.archetype_description;
+            let portrait_name = main_seal.archetype;
+            let _portrait_image = archetype_image.clone();
+            let portrait_description = main_seal.portrait_description;
+            let type_name = type_seal.archetype;
+            let _type_image = type_seal.image;
+            let type_description = type_seal.type_description;
+
+            bot.send_message(msg.chat.id, format!("{archetype_description}\n"))
                 .await?;
-            // .unwrap();
-            // let main_seal = &seals.0.get((archetype.0 - 1) as usize);
-            // let type_seal = &seals.0.get((archetype.1 - 1) as usize);
+            bot.send_message(msg.chat.id, format!("{portrait_name}\n"))
+                .await?;
+            bot.send_message(msg.chat.id, format!("{portrait_description}\n"))
+                .await?;
+            bot.send_message(msg.chat.id, format!("{type_name}\n"))
+                .await?;
+            bot.send_message(msg.chat.id, format!("{type_description}\n"))
+                .await?;
 
-            let main_seal = &seals[0];
-            let type_seal = &seals[1];
-
-            let archetype_image = main_seal.image.to_owned();
-            let archetype_description = main_seal.archetype_description.to_owned();
-            let portrait_name = main_seal.archetype.to_owned();
-            let portrait_image = main_seal.image.to_owned();
-            let portrait_description = main_seal.portrait_description.to_owned();
-            let type_name = type_seal.archetype.to_owned();
-            let type_image = type_seal.image.to_owned();
-            let type_description = type_seal.type_description.to_owned();
-
-            let result = kin;
-            bot.send_message(msg.chat.id, format!("{result}\n")).await?;
-
-            db::save(msg.chat.id.0, kin);
-            /////////////////////////////////////////////////////////////////
-
+            db::save_birthday(&db_pool, msg.chat.id.0, date.to_string()).await;
             dialogue.update(State::Start).await?;
         }
         _ => {

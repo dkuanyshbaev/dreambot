@@ -2,13 +2,7 @@
 // Tzolkin db
 //////////////////////////////////////////
 use serde::{Deserialize, Serialize};
-
-#[derive(sqlx::FromRow)]
-pub struct User {
-    pub id: i64,
-    pub telegram_id: String,
-    pub birth_date: String,
-}
+use sqlx::SqlitePool;
 
 #[derive(Serialize, Deserialize, sqlx::FromRow)]
 pub struct Seal {
@@ -21,20 +15,20 @@ pub struct Seal {
     pub type_description: String,
 }
 
-// use serde::{Deserialize, Serialize};
+pub async fn save_birthday(db_pool: &SqlitePool, id: i64, birthday: String) {
+    let _ = sqlx::query(
+        "INSERT INTO users (id, birthday) VALUES ($1, $2)
+        ON CONFLICT (id) DO UPDATE SET birthday=excluded.birthday",
+    )
+    .bind(id)
+    .bind(birthday)
+    .execute(db_pool)
+    .await;
+}
 
-// #[derive(Serialize, Deserialize, sqlx::FromRow)]
-// pub struct Seal {
-//     id: u8,
-//     name: String,
-//     image: String,
-//     archetype: String,
-//     archetype_description: String,
-//     portrait_description: String,
-//     type_description: String,
-// }
-
-// #[derive(Serialize, Deserialize)]
-// pub struct Seals(Vec<Seal>);
-
-pub fn save(_user_id: i64, _kin: u32) {}
+pub async fn get_seal(db_pool: &SqlitePool, index: u32) -> Result<Seal, sqlx::Error> {
+    sqlx::query_as::<_, Seal>("SELECT * FROM seals WHERE id = ?")
+        .bind(index)
+        .fetch_one(db_pool)
+        .await
+}
