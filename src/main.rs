@@ -18,7 +18,7 @@ type DreamStorage = std::sync::Arc<ErasedStorage<State>>;
 type HandlerResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
 const DATE_FORMAT: &str = "%d.%m.%Y";
-const DB_LOCATION: &str = "/srv/dreambot/db/dreambase.sqlite";
+const DB_LOCATION: &str = "/srv/dreambase/dreambase.sqlite";
 const SEALS_LOCATION: &str = "/srv/seals";
 const MAX_DB_CONNECTIONS: u32 = 10;
 
