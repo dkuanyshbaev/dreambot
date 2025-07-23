@@ -88,6 +88,12 @@ async fn calc(
             let main_seal = db::get_seal(&db_pool, archetype.0).await?;
             let type_seal = db::get_seal(&db_pool, archetype.1).await?;
 
+            let name = if main_seal.name.eq(&type_seal.name) {
+                ["Классический".to_owned(), type_seal.name.to_owned()].join(" ")
+            } else {
+                [main_seal.name.to_owned(), type_seal.name.to_owned()].join(" - ")
+            };
+
             let archetype_image = main_seal.image;
             let archetype_description = main_seal.archetype_description.replace("<br>", " ");
             let portrait_name = main_seal.archetype;
@@ -97,6 +103,7 @@ async fn calc(
             let type_image = type_seal.image;
             let type_description = type_seal.type_description.replace("<br>", " ");
 
+            bot.send_message(msg.chat.id, format!("{name}\n")).await?;
             bot.send_photo(
                 msg.chat.id,
                 InputFile::file(format!("{SEALS_LOCATION}/{archetype_image}")),
