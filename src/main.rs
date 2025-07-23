@@ -93,7 +93,6 @@ async fn calc(
             } else {
                 [main_seal.name.to_owned(), type_seal.name.to_owned()].join(" - ")
             };
-
             let archetype_image = main_seal.image;
             let archetype_description = main_seal.archetype_description.replace("<br>", " ");
             let portrait_name = main_seal.archetype;
