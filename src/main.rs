@@ -6,6 +6,7 @@ use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
 use teloxide::{
     dispatching::dialogue::{serializer::Json, ErasedStorage, SqliteStorage, Storage},
     prelude::*,
+    types::InputFile,
 };
 
 mod db;
@@ -18,6 +19,7 @@ type HandlerResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
 const DATE_FORMAT: &str = "%d.%m.%Y";
 const DB_LOCATION: &str = "/srv/dreambot/db/dreambase.sqlite";
+const SEALS_LOCATION: &str = "/srv/seals";
 const MAX_DB_CONNECTIONS: u32 = 10;
 
 #[derive(Clone, Default, serde::Serialize, serde::Deserialize)]
@@ -89,20 +91,35 @@ async fn calc(
             let archetype_image = main_seal.image;
             let archetype_description = main_seal.archetype_description;
             let portrait_name = main_seal.archetype;
-            let _portrait_image = archetype_image.clone();
+            let portrait_image = archetype_image.clone();
             let portrait_description = main_seal.portrait_description;
             let type_name = type_seal.archetype;
-            let _type_image = type_seal.image;
+            let type_image = type_seal.image;
             let type_description = type_seal.type_description;
 
+            bot.send_photo(
+                msg.chat.id,
+                InputFile::file(format!("{SEALS_LOCATION}/{archetype_image}")),
+            )
+            .await?;
             bot.send_message(msg.chat.id, format!("{archetype_description}\n"))
                 .await?;
             bot.send_message(msg.chat.id, format!("{portrait_name}\n"))
                 .await?;
+            bot.send_photo(
+                msg.chat.id,
+                InputFile::file(format!("{SEALS_LOCATION}/{portrait_image}")),
+            )
+            .await?;
             bot.send_message(msg.chat.id, format!("{portrait_description}\n"))
                 .await?;
             bot.send_message(msg.chat.id, format!("{type_name}\n"))
                 .await?;
+            bot.send_photo(
+                msg.chat.id,
+                InputFile::file(format!("{SEALS_LOCATION}/{type_image}")),
+            )
+            .await?;
             bot.send_message(msg.chat.id, format!("{type_description}\n"))
                 .await?;
 
