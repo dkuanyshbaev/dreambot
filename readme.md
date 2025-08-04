@@ -4,7 +4,6 @@ CREATE TABLE users (
     id integer PRIMARY KEY,
     birthday text Not null
 );
-
 CREATE TABLE seals (
     id integer PRIMARY KEY AUTOINCREMENT,
     name text Not null,
